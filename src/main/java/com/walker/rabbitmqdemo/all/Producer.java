@@ -1,15 +1,16 @@
-package com.walker.rabbitmqdemo.simple;
+package com.walker.rabbitmqdemo.all;
 
-import com.rabbitmq.client.*;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 /**
- * 简单模式
+ *
  */
-public class Consumer {
-
+public class Producer {
     public static void main(String[] args) {
 //        1、创建连接工程
         ConnectionFactory factory = new ConnectionFactory();
@@ -25,28 +26,27 @@ public class Consumer {
             connection = factory.newConnection("生产者");
             //3、通过连接获取通道channel
             channel = connection.createChannel();
-            //接收指定队列的消息
-            channel.basicConsume("queue_1", true, new DeliverCallback() {
-                //一个rabbitmq消息消息传递时通知的回调接口
-                @Override
-                public void handle(String consumerTag, Delivery message) throws IOException {
-                    //message.getBody()返回的是byte[]，将其转化为string
-                    System.out.println("收到消息" + new String(message.getBody(), "UTF-8"));
-                }
-            }, new CancelCallback() {
-                //消费者取消时通知的回调接口
-                @Override
-                public void handle(String consumerTag) throws IOException {
-                    System.out.println("接受失败");
-                }
-            });
-            System.out.println("开始接收消息");
-            System.in.read();
+            //5、声明交换机及类型 fanout、direct、topic、header
+            String exchange = "direct_code_exchange";
+            String exchangeType = "direct";
+            channel.exchangeDeclare(exchange, exchangeType, true);
 
+            //6、声明队列
+            channel.queueDeclare("queue4", true, false, false, null);
+            channel.queueDeclare("queue5", true, false, false, null);
+            channel.queueDeclare("queue6", true, false, false, null);
+            //7、绑定exchange与queue
+            channel.queueBind("queue4", exchange, "order");
+            channel.queueBind("queue5", exchange, "order");
+            channel.queueBind("queue6", exchange, "msg");
+            //8、准备消息内容
+            String message = "Hello World!";
+            //9、发送消息给队列queue
+            channel.basicPublish(exchange, "order", null, message.getBytes());
         }catch (Exception e){
             e.printStackTrace();
         }finally {
-            //7、关闭连接
+            //10、关闭连接
             if (channel != null && channel.isOpen()){
                 try {
                     channel.close();
@@ -56,7 +56,7 @@ public class Consumer {
                     throw new RuntimeException(e);
                 }
             }
-            // 8、关闭通道
+            // 11、关闭通道
             if (connection != null && connection.isOpen()) {
                 try {
                     connection.close();
@@ -64,11 +64,6 @@ public class Consumer {
                     throw new RuntimeException(e);
                 }
             }
-
         }
-
-
-//
-//
     }
 }
